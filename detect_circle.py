@@ -3,6 +3,7 @@ import cv2
 import copy
 import numpy as np
 
+
 # 椭圆拟合及筛选
 def ellipse_fit_filter(image, contours):
     """
@@ -10,13 +11,13 @@ def ellipse_fit_filter(image, contours):
         image (_type_): init image
         contours (_type_): canny edge detection
     """
-    
+
     # save circle and bounding box
     result = []
-    
+
     # detect circle
     processed_centers = []
-    
+
     for contour in contours:
         # 如果轮廓点数不足 5，则跳过
         if len(contour) < 5:
@@ -26,11 +27,11 @@ def ellipse_fit_filter(image, contours):
         area = cv2.contourArea(contour)
         if area < 10 or area > 50:
             continue
-        
+
         # 根据圆形度筛选   
         perimeter = cv2.arcLength(contour, True)
         circularity = 4 * np.pi * (area / (perimeter * perimeter))
-        
+
         # 圆形度应接近 1，设置合适的阈值
         if circularity < 0.9:
             continue
@@ -44,7 +45,7 @@ def ellipse_fit_filter(image, contours):
             cy = M['m01'] / M['m00']
         else:
             continue
-        
+
         # 合并相近的圆心
         close_enough = False
         for center in processed_centers:
@@ -70,7 +71,7 @@ def ellipse_fit_filter(image, contours):
         int_center = (int(cx), int(cy))
         center = (cx, cy)
         cv2.circle(image, int_center, 3, (0, 0, 255), -1)
-        
+
         # 记录处理后的圆心
         processed_centers.append((cx, cy))
         result.append((cx, cy, w, h))
@@ -81,8 +82,9 @@ def ellipse_fit_filter(image, contours):
     # cv2.imshow('Fitted Ellipses', image)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
-    
+
     return result
+
 
 # Calculate normalized coordinates and store in label.txt
 def coordinate_norm_and_save(bounding_boxes, image_width, image_height, save_path, image_filename):
@@ -93,11 +95,11 @@ def coordinate_norm_and_save(bounding_boxes, image_width, image_height, save_pat
         # 计算归一化的中心坐标
         x_center_normalized = bbox[0] / image_width
         y_center_normalized = bbox[1] / image_height
-        
+
         # 计算归一化的宽度和高度
         w_normalized = bbox[2] / image_width
         h_normalized = bbox[3] / image_height
-        
+
         # 将归一化结果存储在列表中
         normalized_bounding_boxes.append({
             'class_id': 0,
@@ -106,7 +108,7 @@ def coordinate_norm_and_save(bounding_boxes, image_width, image_height, save_pat
             'width': w_normalized,
             'height': h_normalized
         })
-        
+
     # 创建标签文件路径
     label_filename = os.path.join(save_path, f"{image_filename}.txt")
 
@@ -116,14 +118,14 @@ def coordinate_norm_and_save(bounding_boxes, image_width, image_height, save_pat
             # 按要求格式写入每一行
             line = f"{bbox['class_id']} {bbox['x_center']} {bbox['y_center']} {bbox['width']} {bbox['height']}\n"
             f.write(line)
-            
+
+
 def circle_detect(image):
-    
-    iter = 3
-    
+    iteration = 3
+
     threshold_difference = 60
-    
-    for i in range(iter):     
+
+    for i in range(iteration):
         # 转为灰度图像
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -132,17 +134,18 @@ def circle_detect(image):
 
         # 使用 Canny 进行边缘检测
         edges = cv2.Canny(blurred, threshold_difference, 180)
-        
+
         # 显示边缘检测后的图像
         # cv2.imshow("Edges Detected", edges)
 
         # 等待用户按键
         # cv2.waitKey(0)  # 等待按键才能继续，0表示无限等待
-        
+
         # 查找轮廓
         contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        
+
         return ellipse_fit_filter(image, contours)
+
 
 video_paths = [
     # 'video_data\TC_S1_acting1_cam1.mp4',
@@ -151,18 +154,17 @@ video_paths = [
     # 'video_data\TC_S1_acting1_cam4.mp4',
     # 'video_data\TC_S1_acting1_cam5.mp4',
     # 'video_data\TC_S1_acting1_cam6.mp4',
-    'video_data\TC_S1_acting1_cam7.mp4',
-    'video_data\TC_S1_acting1_cam8.mp4'
-    ]
+    'video_data\\TC_S1_acting1_cam7.mp4',
+    'video_data\\TC_S1_acting1_cam8.mp4'
+]
 
-imgs_save_path = 'E:\\INFJ\\maker_data\\images'
-paint_img_save_path = 'data\circle_images'
+img_save_paths = 'E:\\INFJ\\maker_data\\images'
+paint_img_save_path = 'data\\circle_images'
 labels_save_path = 'E:\\INFJ\\maker_data\\labels'
 
 close_video = False
 
 for video_path in video_paths:
-
 
     video_name = video_path.split('\\')[1].split('.')[0]
 
@@ -179,18 +181,19 @@ for video_path in video_paths:
             break
 
         paint_img = copy.deepcopy(frame)
-        
+
         center_bounding_box = circle_detect(paint_img)
-        
+
         cv2.imshow("Frame", paint_img)
 
         if len(center_bounding_box) > 5:
-            cv2.imwrite(imgs_save_path + '\\' + video_name + '_' + str(index) + '.bmp', frame)
+            cv2.imwrite(img_save_paths + '\\' + video_name + '_' + str(index) + '.bmp', frame)
             # cv2.imwrite(paint_img_save_path + '\\' + video_name + '_' + str(index) + '.bmp', paint_img)
-            coordinate_norm_and_save(center_bounding_box, frame.shape[1], frame.shape[0], labels_save_path, video_name + '_' + str(index))
+            coordinate_norm_and_save(center_bounding_box, frame.shape[1], frame.shape[0], labels_save_path,
+                                     video_name + '_' + str(index))
             print('图片和标签保存成功')
             index += 1
-        
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             close_video = True
             break
@@ -207,12 +210,12 @@ for video_path in video_paths:
 
         # elif key == ord('d'):  # 按下 'd' 表示跳过当前帧
         #     print("跳过当前帧")
-            
+
         # elif key == ord('q'):  # 按下 'q' 退出
         #     break
 
-    if close_video == True:
+    if close_video:
         break
-    
+
     cap.release()
     cv2.destroyAllWindows()
